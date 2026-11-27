@@ -3,7 +3,7 @@
 Jednostránková kalkulačka TCO služebního vozu (operativní leasing), elektro vs. diesel.
 Statická stránka bez závislostí: jeden soubor `index.html`.
 
-- Výchozí hodnoty odpovídají výpočtu v4 (nabídky BUSINESS LEASE z 20. 11. 2026, 36 měsíců, 50 000 km/rok).
+- Výchozí hodnoty odpovídají výpočtu v4 (36 měsíců, 50 000 km/rok).
 - Všechny vstupy lze měnit, výsledek se přepočítá okamžitě. Zadané hodnoty si prohlížeč pamatuje (localStorage).
 - Výstup: TCO pro firmu (před a po dani z příjmů, včetně krácení DPH) a výhody pro zaměstnance zvlášť.
 
