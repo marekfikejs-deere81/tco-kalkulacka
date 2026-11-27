@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TCO kalkulačka Enyaq vs. Kodiaq</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: inputs on the left, sticky results panel on the right; stacks to one column on phones */
+:root{
+  --bg:#f3f5f1; --panel:#ffffff; --ink:#1b2a20; --muted:#5d6b62; --line:#d9e0da;
+  --accent:#2f6b3a; --accent-soft:#e3eee2; --diesel:#7a5a14; --ev:#1f6f8b;
+  --pos:#a3361f; --neg:#22733a; --field:#f8faf7;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121814; --panel:#1a221d; --ink:#e4ebe5; --muted:#9aa89f; --line:#2c3830;
+  --accent:#7cc38a; --accent-soft:#223327; --diesel:#d9b25e; --ev:#6cc0dc;
+  --pos:#f08c74; --neg:#7fd394; --field:#141b16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121814; --panel:#1a221d; --ink:#e4ebe5; --muted:#9aa89f; --line:#2c3830;
+  --accent:#7cc38a; --accent-soft:#223327; --diesel:#d9b25e; --ev:#6cc0dc;
+  --pos:#f08c74; --neg:#7fd394; --field:#141b16; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:18px}
+h1{font-size:1.55rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin-top:4px;max-width:70ch}
+button{font:inherit;cursor:pointer;border-radius:6px}
+.btn{background:transparent;border:1px solid var(--line);color:var(--ink);padding:7px 12px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.inputs{display:flex;flex-direction:column;gap:14px}
+.card h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 10px;font-weight:600}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+@media (max-width:480px){.fields{grid-template-columns:minmax(0,1fr)}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.86rem;color:var(--muted)}
+.inp{display:flex;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.inp:focus-within{border-color:var(--accent)}
+.inp input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--f-num);font-size:.95rem;padding:7px 8px;text-align:right}
+.inp input:focus{outline:none}
+.inp span{padding:0 8px 0 2px;color:var(--muted);font-size:.8rem;white-space:nowrap}
+.car-d{color:var(--diesel)} .car-e{color:var(--ev)}
+.tag{font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mix .inp{max-width:140px;margin-left:auto}
+.mix .inp input{width:7ch;flex:none}
+.mix td:first-child{min-width:110px}
+.mix input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+.scroll{overflow-x:auto}
+.warn{color:var(--pos);font-size:.85rem;margin-top:6px}
+.chk{display:flex;align-items:center;gap:8px;font-size:.9rem;margin-bottom:10px}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+.results{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:14px}
+@media (max-width:900px){.results{position:static}}
+.verdict{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:1rem}
+.verdict b{font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.kpis{grid-template-columns:minmax(0,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi .l{font-size:.78rem;color:var(--muted)}
+.kpi .v{font-family:var(--f-num);font-size:1.25rem;font-weight:600;margin-top:2px}
+.kpi .s{font-size:.78rem;color:var(--muted);margin-top:2px;font-family:var(--f-num)}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+tr.sum td{font-weight:700;background:var(--accent-soft)}
+tr.sub td{font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;color:var(--muted);padding:5px 10px;font-size:.82rem}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--panel)}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.rhead h2{margin:0}
+.note{font-size:.78rem;color:var(--muted);margin-top:8px}
+@media (prefers-reduced-motion:no-preference){.kpi .v,td.n{transition:color .2s}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>TCO kalkulačka: Enyaq 85 vs. Kodiaq 2.0 TDI</h1>
+    <div class="sub">Služební vůz v operativním leasingu, 1 vůz. Výchozí hodnoty odpovídají výpočtu v4 (nabídky BUSINESS LEASE z 20. 11. 2026). Všechny částky TCO jsou bez DPH. Výsledek se přepočítá hned po změně.</div>
+  </div>
+  <button class="btn" id="reset" type="button">Obnovit výchozí hodnoty</button>
+</header>
+
+<div class="grid">
+<div class="inputs">
+
+  <section class="card">
+    <h2>Smlouva a nájezd</h2>
+    <div class="fields">
+      <label class="f">Délka smlouvy<div class="inp"><input id="months" type="number" step="1" min="1"><span>měs.</span></div></label>
+      <label class="f">Roční nájezd<div class="inp"><input id="kmYear" type="number" step="1000" min="0"><span>km</span></div></label>
+      <label class="f"><span><span class="tag car-d">Kodiaq</span> měsíční nájem</span><div class="inp"><input id="rentD" type="number" step="0.01"><span>Kč bez DPH</span></div></label>
+      <label class="f"><span><span class="tag car-e">Enyaq</span> měsíční nájem</span><div class="inp"><input id="rentE" type="number" step="0.01"><span>Kč bez DPH</span></div></label>
+      <label class="f"><span><span class="tag car-d">Kodiaq</span> vstupní cena</span><div class="inp"><input id="priceD" type="number" step="1"><span>Kč vč. DPH</span></div></label>
+      <label class="f"><span><span class="tag car-e">Enyaq</span> vstupní cena</span><div class="inp"><input id="priceE" type="number" step="1"><span>Kč vč. DPH</span></div></label>
+    </div>
+    <p class="note">Nájem zahrnuje servis, pneu, pojištění a náhradní vůz. Vstupní cena slouží jen pro výpočet benefitu.</p>
+  </section>
+
+  <section class="card">
+    <h2>Spotřeba a palivo</h2>
+    <div class="fields">
+      <label class="f"><span><span class="tag car-d">Kodiaq</span> spotřeba nafty</span><div class="inp"><input id="consD" type="number" step="0.1"><span>l/100 km</span></div></label>
+      <label class="f">Cena nafty<div class="inp"><input id="dieselPrice" type="number" step="0.1"><span>Kč/l vč. DPH</span></div></label>
+      <label class="f"><span><span class="tag car-e">Enyaq</span> spotřeba elektřiny</span><div class="inp"><input id="consE" type="number" step="0.1"><span>kWh/100 km</span></div></label>
+      <label class="f">Ztráty při nabíjení<div class="inp"><input id="loss" type="number" step="1" min="0"><span>%</span></div></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Nabíjecí mix Enyaqu</h2>
+    <div class="scroll">
+    <table class="mix">
+      <thead><tr><th>Zdroj</th><th class="n">Podíl</th><th class="n">Cena vč. DPH</th><th class="n" title="Firma si může odečíst DPH">Odpočet DPH</th><th class="n">Pro firmu</th></tr></thead>
+      <tbody id="mixBody"></tbody>
+      <tfoot><tr class="sub"><td>Celkem / vážená cena</td><td class="n" id="mixSum"></td><td></td><td></td><td class="n" id="mixAvg"></td></tr></tfoot>
+    </table>
+    </div>
+    <div class="warn" id="mixWarn" hidden></div>
+    <div class="fields" style="margin-top:12px">
+      <label class="f">Firemní wallbox doma<div class="inp"><input id="wallbox" type="number" step="10"><span>Kč/měs.</span></div></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Soukromé užití a daně</h2>
+    <label class="chk"><input type="checkbox" id="private"> Auto slouží i k soukromým účelům</label>
+    <div class="fields">
+      <label class="f"><span><span class="tag car-d">Kodiaq</span> benefit</span><div class="inp"><input id="benD" type="number" step="0.05"><span>% ceny/měs.</span></div></label>
+      <label class="f"><span><span class="tag car-e">Enyaq</span> benefit</span><div class="inp"><input id="benE" type="number" step="0.05"><span>% ceny/měs.</span></div></label>
+      <label class="f">Zaměstnanec hradí z energie<div class="inp"><input id="empShare" type="number" step="1"><span>%</span></div></label>
+      <label class="f">Podíl soukromých jízd (krácení DPH)<div class="inp"><input id="privShare" type="number" step="1"><span>%</span></div></label>
+      <label class="f">Odvody firmy z benefitu<div class="inp"><input id="er" type="number" step="0.1"><span>%</span></div></label>
+      <label class="f">Daň a pojistné zaměstnance<div class="inp"><input id="ee" type="number" step="0.1"><span>%</span></div></label>
+      <label class="f">Sazba DPH<div class="inp"><input id="vat" type="number" step="1"><span>%</span></div></label>
+      <label class="f">Daň z příjmů firmy<div class="inp"><input id="cit" type="number" step="1"><span>%</span></div></label>
+    </div>
+    <p class="note">Odvody firmy 33,8 % = SP 24,8 % + ZP 9 %. Zaměstnanec 26,6 % = daň 15 % + SP 7,1 % + ZP 4,5 %.</p>
+  </section>
+</div>
+
+<div class="results" aria-live="polite">
+  <div class="verdict" id="verdict"></div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">TCO firma po zdanění · <span class="car-d tag">Kodiaq</span></div><div class="v" id="kD"></div><div class="s" id="kDkm"></div></div>
+    <div class="kpi"><div class="l">TCO firma po zdanění · <span class="car-e tag">Enyaq</span></div><div class="v" id="kE"></div><div class="s" id="kEkm"></div></div>
+    <div class="kpi"><div class="l">Úspora zaměstnance s Enyaqem</div><div class="v" id="kEmp"></div><div class="s" id="kEmpM"></div></div>
+  </div>
+
+  <section class="card">
+    <div class="rhead"><h2>TCO pro firmu</h2>
+      <div class="seg" role="group" aria-label="Období"><button type="button" data-per="total" aria-pressed="true">Za smlouvu</button><button type="button" data-per="month" aria-pressed="false">Měsíčně</button></div>
+    </div>
+    <div class="scroll"><table><thead><tr><th>Položka</th><th class="n car-d">Kodiaq</th><th class="n car-e">Enyaq</th><th class="n">Rozdíl E − D</th></tr></thead><tbody id="firmBody"></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <div class="rhead"><h2>Výhody pro zaměstnance</h2></div>
+    <div class="scroll"><table><thead><tr><th>Položka</th><th class="n car-d">Kodiaq</th><th class="n car-e">Enyaq</th><th class="n">Rozdíl E − D</th></tr></thead><tbody id="empBody"></tbody></table></div>
+    <p class="note" id="combined"></p>
+  </section>
+</div>
+</div>
+</div>
+
+<script>
+const DEF={months:36,kmYear:50000,rentD:17796.62,rentE:23575.49,priceD:966919.01,priceE:1055929.01,
+  consD:7.5,dieselPrice:40,consE:22,loss:0,wallbox:500,private:true,benD:1,benE:0.25,empShare:20,privShare:20,
+  er:33.8,ee:26.6,vat:21,cit:21,
+  mix:[{n:'Doma',sh:60,p:7.2,ded:false},{n:'V zaměstnání',sh:15,p:5,ded:true},{n:'Veřejné AC',sh:10,p:9.25,ded:true},{n:'Veřejné DC / HPC',sh:15,p:13,ded:true}]};
+const KEYS=['months','kmYear','rentD','rentE','priceD','priceE','consD','dieselPrice','consE','loss','wallbox','benD','benE','empShare','privShare','er','ee','vat','cit'];
+let S=JSON.parse(JSON.stringify(DEF)); let per='total';
+try{const s=localStorage.getItem('tco-ev-diesel-v1'); if(s){const o=JSON.parse(s); S=Object.assign(S,o);}}catch(e){}
+const $=id=>document.getElementById(id);
+const nf=(x,d=0)=>new Intl.NumberFormat('cs-CZ',{minimumFractionDigits:d,maximumFractionDigits:d}).format(x).replace('-','−');
+const kc=(x,d=0)=>nf(x,d)+' Kč';
+const sg=(x,d=0)=>(x>0.5?'+':'')+nf(Math.abs(x)<0.5&&d===0?0:x,d);
+const cl=x=>x>0.5?'pos':(x<-0.5?'neg':'');
+
+function buildMix(){
+  $('mixBody').innerHTML=S.mix.map((m,i)=>`<tr><td>${m.n}</td>
+   <td class="n"><div class="inp"><input id="mixsh${i}" type="number" step="1" min="0" value="${m.sh}" aria-label="Podíl ${m.n}"><span>%</span></div></td>
+   <td class="n"><div class="inp"><input id="mixp${i}" type="number" step="0.05" min="0" value="${m.p}" aria-label="Cena ${m.n}"><span>Kč/kWh</span></div></td>
+   <td class="n"><input id="mixd${i}" type="checkbox" ${m.ded?'checked':''} aria-label="Odpočet DPH ${m.n}"></td>
+   <td class="n" id="mixc${i}"></td></tr>`).join('');
+  S.mix.forEach((m,i)=>{
+    $('mixsh'+i).addEventListener('input',e=>{m.sh=+e.target.value||0;calc()});
+    $('mixp'+i).addEventListener('input',e=>{m.p=+e.target.value||0;calc()});
+    $('mixd'+i).addEventListener('change',e=>{m.ded=e.target.checked;calc()});
+  });
+}
+function fill(){KEYS.forEach(k=>$(k).value=S[k]); $('private').checked=!!S.private; buildMix();}
+KEYS.forEach(k=>$(k).addEventListener('input',e=>{S[k]=e.target.value===''?0:+e.target.value;calc()}));
+$('private').addEventListener('change',e=>{S.private=e.target.checked;calc()});
+$('reset').addEventListener('click',()=>{S=JSON.parse(JSON.stringify(DEF));fill();calc()});
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{per=b.dataset.per;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));calc()}));
+
+function model(){
+  const V=S.vat/100, km=S.kmYear/12, T=S.months, priv=S.private;
+  const s=priv?S.empShare/100:0, ps=priv?S.privShare/100:0;
+  // diesel
+  const enD=S.consD/100*km*S.dieselPrice/(1+V);
+  // EV
+  const kwh=S.consE/100*km*(1+S.loss/100);
+  const shSum=S.mix.reduce((a,m)=>a+m.sh,0);
+  const cost=m=>m.ded?m.p/(1+V):m.p;
+  const wavg=shSum>0?S.mix.reduce((a,m)=>a+m.sh*cost(m),0)/shSum:0;
+  const dedAvg=shSum>0?S.mix.reduce((a,m)=>a+(m.ded?m.sh*m.p/(1+V):0),0)/shSum:0;
+  const enE=kwh*wavg, dedE=kwh*dedAvg;
+  const benD=S.priceD*S.benD/100, benE=S.priceE*S.benE/100;
+  const odvD=priv?benD*S.er/100:0, odvE=priv?benE*S.er/100:0;
+  const krD=ps*V*(S.rentD+enD), krE=ps*V*(S.rentE+S.wallbox+dedE);
+  const preD=S.rentD+enD*(1-s)+odvD+krD, preE=S.rentE+enE*(1-s)+S.wallbox+odvE+krE;
+  const C=S.cit/100;
+  const taxD=priv?benD*S.ee/100:0, taxE=priv?benE*S.ee/100:0;
+  return {T,km,kwh,shSum,wavg,enD,enE,benD,benE,odvD,odvE,krD,krE,preD,preE,C,
+    postD:preD*(1-C),postE:preE*(1-C),s,taxD,taxE,empD:enD*s+taxD,empE:enE*s+taxE,priv,V};
+}
+function calc(){
+  const r=model(), T=r.T, f=per==='total'?T:1, kmT=r.km*T;
+  // mix rows
+  S.mix.forEach((m,i)=>{const c=m.ded?m.p/(1+r.V):m.p;$('mixc'+i).textContent=nf(c,2)+' Kč';});
+  $('mixSum').textContent=nf(r.shSum)+' %'; $('mixAvg').textContent=nf(r.wavg,2)+' Kč/kWh';
+  const w=$('mixWarn'); if(Math.abs(r.shSum-100)>0.01){w.hidden=false;w.textContent=`Součet podílů je ${nf(r.shSum)} %. Cena se počítá jako vážený průměr, ale zkontrolujte, že mix dává 100 %.`}else w.hidden=true;
+  // KPIs
+  $('kD').textContent=kc(r.postD*T); $('kE').textContent=kc(r.postE*T);
+  $('kDkm').textContent=nf(r.postD*T/kmT,2)+' Kč/km · '+kc(r.postD)+'/měs.';
+  $('kEkm').textContent=nf(r.postE*T/kmT,2)+' Kč/km · '+kc(r.postE)+'/měs.';
+  const sav=(r.empD-r.empE)*T; const ke=$('kEmp'); ke.textContent=kc(sav); ke.className='v '+(sav>0.5?'neg':sav<-0.5?'pos':'');
+  $('kEmpM').textContent=kc(r.empD-r.empE)+'/měs.';
+  const dF=(r.postE-r.postD)*T;
+  $('verdict').innerHTML = Math.abs(dF)<1 ? `Pro firmu vycházejí oba vozy za ${T} měsíců stejně.`
+    : `Pro firmu je za ${T} měsíců <b>${dF>0?'levnější Kodiaq':'levnější Enyaq'}</b>, o <b>${kc(Math.abs(dF))}</b> po zdanění (${kc(Math.abs(dF/T))}/měs.). `+
+      (r.priv?`Zaměstnanec s Enyaqem ${sav>=0?'ušetří':'zaplatí navíc'} <b>${kc(Math.abs(sav))}</b>.`:`Auto bez soukromého užití, zaměstnanec nic neplatí.`);
+  // firm table
+  const row=(n,a,b,c='')=>`<tr class="${c}"><td>${n}</td><td class="n">${nf(a*f)}</td><td class="n">${nf(b*f)}</td><td class="n ${cl((b-a)*f)}">${sg((b-a)*f)}</td></tr>`;
+  let h='';
+  h+=row('Nájemné',S.rentD,S.rentE);
+  h+=row(`Energie – podíl firmy (${nf(100-r.s*100)} %)`,r.enD*(1-r.s),r.enE*(1-r.s));
+  h+=row('Wallbox doma',0,S.wallbox);
+  h+=row(`Odvody firmy z benefitu (${nf(S.er,1)} %)`,r.odvD,r.odvE);
+  h+=row(`Krácení odpočtu DPH (${nf(r.priv?S.privShare:0)} % soukr. jízd)`,r.krD,r.krE);
+  h+=row('TCO firma před zdaněním',r.preD,r.preE,'sub');
+  h+=row(`Úspora na dani z příjmů (${nf(S.cit)} %)`,-r.preD*r.C,-r.preE*r.C);
+  h+=row('TCO firma po zdanění',r.postD,r.postE,'sum');
+  h+=`<tr><td>Náklad firmy na 1 km</td><td class="n">${nf(r.postD*T/kmT,2)}</td><td class="n">${nf(r.postE*T/kmT,2)}</td><td class="n ${cl((r.postE-r.postD)*100)}">${(r.postE-r.postD)>0?'+':''}${nf((r.postE-r.postD)*T/kmT,2)}</td></tr>`;
+  $('firmBody').innerHTML=h;
+  // employee table
+  let e='';
+  e+=row(`Zdanitelný benefit (${nf(S.benD,2)} % / ${nf(S.benE,2)} %)`,r.priv?r.benD:0,r.priv?r.benE:0);
+  e+=row(`Daň a pojistné z benefitu (${nf(S.ee,1)} %)`,r.taxD,r.taxE);
+  e+=row(`Spoluúčast na energii (${nf(r.s*100)} %)`,r.enD*r.s,r.enE*r.s);
+  e+=row('Náklad zaměstnance',r.empD,r.empE,'sum');
+  $('empBody').innerHTML=e;
+  const comb=((r.postE+r.empE)-(r.postD+r.empD))*T;
+  $('combined').textContent=`Firma po zdanění a zaměstnanec dohromady: Enyaq ${comb>0?'dražší':'levnější'} o ${kc(Math.abs(comb))} za ${T} měsíců. `+(per==='total'?`Tabulky ukazují částky za celou smlouvu (${nf(kmT)} km).`:'Tabulky ukazují částky za měsíc.');
+  try{localStorage.setItem('tco-ev-diesel-v1',JSON.stringify(S))}catch(e){}
+}
+fill(); calc();
+</script>
+
+</body>
+</html>
