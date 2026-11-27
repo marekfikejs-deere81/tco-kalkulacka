@@ -47,6 +47,8 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:.86rem;color:var(--
 .inp:focus-within{border-color:var(--accent)}
 .inp input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--f-num);font-size:.95rem;padding:7px 8px;text-align:right}
 .inp input:focus{outline:none}
+.inp select{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;padding:7px 8px}
+.inp select:focus{outline:none}
 .inp span{padding:0 8px 0 2px;color:var(--muted);font-size:.8rem;white-space:nowrap}
 .car-d{color:var(--diesel)} .car-e{color:var(--ev)}
 .tag{font-weight:600}
@@ -100,6 +102,9 @@ tr.sub td{font-weight:600}
 
   <section class="card">
     <h2>Smlouva a nájezd</h2>
+    <label class="f" style="margin-bottom:10px">Nabídka (délka smlouvy)<div class="inp"><select id="offer" aria-label="Nabídka">
+      <option value="24">24 měsíců</option><option value="30">30 měsíců</option><option value="36">36 měsíců</option><option value="48">48 měsíců (Enyaq bez nabídky)</option><option value="custom">Vlastní hodnoty</option></select></div></label>
+    <div class="warn" id="offerWarn" hidden></div>
     <div class="fields">
       <label class="f">Délka smlouvy<div class="inp"><input id="months" type="number" step="1" min="1"><span>měs.</span></div></label>
       <label class="f">Roční nájezd<div class="inp"><input id="kmYear" type="number" step="1000" min="0"><span>km</span></div></label>
@@ -108,7 +113,7 @@ tr.sub td{font-weight:600}
       <label class="f"><span><span class="tag car-d">Kodiaq</span> vstupní cena</span><div class="inp"><input id="priceD" type="number" step="1"><span>Kč vč. DPH</span></div></label>
       <label class="f"><span><span class="tag car-e">Enyaq</span> vstupní cena</span><div class="inp"><input id="priceE" type="number" step="1"><span>Kč vč. DPH</span></div></label>
     </div>
-    <p class="note">Nájem zahrnuje servis, pneu, pojištění a náhradní vůz. Vstupní cena slouží jen pro výpočet benefitu.</p>
+    <p class="note">Výběr nabídky nastaví délku smlouvy, měsíční nájem a vstupní cenu obou vozů. Vstupní cena je ve všech nabídkách stejná. Všechny nabídky počítají s nájezdem 50 000 km/rok. Jiný nájezd změní náklady na energii, ale nájem zůstane podle nabídky. Nájem zahrnuje servis, pneu, pojištění a náhradní vůz. Vstupní cena slouží jen pro výpočet benefitu.</p>
   </section>
 
   <section class="card">
@@ -178,7 +183,11 @@ tr.sub td{font-weight:600}
 </div>
 
 <script>
-const DEF={months:36,kmYear:50000,rentD:17796.62,rentE:23575.49,priceD:966919.01,priceE:1055929.01,
+// Vstupní cena vč. DPH je ve všech nabídkách stejná; pole pD/pE umožňuje zadat jinou cenu pro konkrétní variantu.
+const OFFERS={'24':{d:17081.63,e:22209.62,pD:966919.01,pE:1055929.01},'30':{d:17379.53,e:24476.20,pD:966919.01,pE:1055929.01},
+  '36':{d:17796.62,e:23575.49,pD:966919.01,pE:1055929.01},'48':{d:19434.87,e:null,pD:966919.01,pE:null}};
+const OFFER_KM=50000;
+const DEF={offer:'36',months:36,kmYear:50000,rentD:17796.62,rentE:23575.49,priceD:966919.01,priceE:1055929.01,
   consD:7.5,dieselPrice:40,consE:22,loss:0,wallbox:500,private:true,benD:1,benE:0.25,empShare:20,privShare:20,
   er:33.8,ee:26.6,vat:21,cit:21,
   mix:[{n:'Doma',sh:60,p:7.2,ded:false},{n:'V zaměstnání',sh:15,p:5,ded:true},{n:'Veřejné AC',sh:10,p:9.25,ded:true},{n:'Veřejné DC / HPC',sh:15,p:13,ded:true}]};
@@ -203,7 +212,21 @@ function buildMix(){
     $('mixd'+i).addEventListener('change',e=>{m.ded=e.target.checked;calc()});
   });
 }
-function fill(){KEYS.forEach(k=>$(k).value=S[k]); $('private').checked=!!S.private; buildMix();}
+function offerNote(){
+  const w=$('offerWarn'), o=S.offer, m=[];
+  if(o==='48') m.push('Enyaq na 48 měsíců nabídnutý nebyl. Nájem a cena Enyaqu zůstaly z předchozí volby. Výsledek pro Enyaq proto neplatí, dokud nájem nezadáte ručně.');
+  if(o==='30') m.push('Enyaq 30 m má v nabídce vyšší nájem než 36 m. Pravděpodobně chyba kalkulace leasingovky.');
+  if(S.kmYear!==OFFER_KM) m.push(`Nabídky platí pro ${nf(OFFER_KM)} km/rok. Při jiném nájezdu se nájem ve skutečnosti změní, kalkulačka ho nepřepočítává.`);
+  w.hidden=!m.length; w.innerHTML=m.join('<br>');
+}
+$('offer').addEventListener('change',e=>{
+  S.offer=e.target.value; const o=OFFERS[S.offer];
+  if(o){S.months=+S.offer; S.rentD=o.d; S.priceD=o.pD; if(o.e!=null){S.rentE=o.e; S.priceE=o.pE;}
+    ['months','rentD','rentE','priceD','priceE'].forEach(k=>$(k).value=S[k]);}
+  calc();
+});
+['months','rentD','rentE','priceD','priceE'].forEach(k=>$(k).addEventListener('input',()=>{S.offer='custom';$('offer').value='custom'}));
+function fill(){KEYS.forEach(k=>$(k).value=S[k]); $('offer').value=S.offer||'custom'; $('private').checked=!!S.private; buildMix();}
 KEYS.forEach(k=>$(k).addEventListener('input',e=>{S[k]=e.target.value===''?0:+e.target.value;calc()}));
 $('private').addEventListener('change',e=>{S.private=e.target.checked;calc()});
 $('reset').addEventListener('click',()=>{S=JSON.parse(JSON.stringify(DEF));fill();calc()});
@@ -231,6 +254,7 @@ function model(){
     postD:preD*(1-C),postE:preE*(1-C),s,taxD,taxE,empD:enD*s+taxD,empE:enE*s+taxE,priv,V};
 }
 function calc(){
+  offerNote();
   const r=model(), T=r.T, f=per==='total'?T:1, kmT=r.km*T;
   // mix rows
   S.mix.forEach((m,i)=>{const c=m.ded?m.p/(1+r.V):m.p;$('mixc'+i).textContent=nf(c,2)+' Kč';});
